@@ -33,9 +33,9 @@ async function handleUpdate(body) {
   console.log(`[${from}] ${text}`);
 
   try {
-    await sendMessage(chatId, 'Got your message, working on it...');
+    await sendMessage(chatId, `Got your message, working on it... (your ID: ${chatId})`);
     await sendTyping(chatId);
-    const reply = await processMessage(text);
+    const reply = await processMessage(text, chatId);
     if (reply) await sendMessage(chatId, reply);
   } catch (err) {
     console.error('Error handling update:', err);
