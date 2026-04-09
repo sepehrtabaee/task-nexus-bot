@@ -39,7 +39,7 @@ async function handleUpdate(body) {
     if (reply) await sendMessage(chatId, reply);
   } catch (err) {
     console.error('Error handling update:', err);
-    await sendMessage(chatId, 'Sorry, something went wrong.').catch(() => { });
+    await sendMessage(chatId, `Sorry, something went wrong. ${err}`).catch(() => { });
   }
 }
 
