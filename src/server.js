@@ -3,7 +3,7 @@ import { config } from './config.js';
 import { parseUpdate, sendMessage, sendTyping } from './telegram.js';
 import { processMessage } from './claude.js';
 
-export const app = express();
+const app = express();
 app.use(express.json());
 
 // ── Telegram webhook ─────────────────────────────────────────────────────────
@@ -53,3 +53,5 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`Server listening on port ${config.port}`);
   });
 }
+
+export default app;
