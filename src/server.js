@@ -23,6 +23,12 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
+async function getUserByTelegramId(chatId) {
+  const res = await fetch(`${config.apiUrl}/telegram/${chatId}`);
+  if (!res.ok) throw new Error(`Failed to fetch user for chatId ${chatId}: ${res.status}`);
+  return res.json();
+}
+
 async function handleUpdate(body) {
   const update = parseUpdate(body);
   if (!update) return;
@@ -33,7 +39,11 @@ async function handleUpdate(body) {
   try {
     await sendMessage(chatId, `Got your message, working on it`);
     await sendTyping(chatId);
-    const reply = await processMessage(text, chatId);
+
+    const user = await getUserByTelegramId(chatId);
+    const userId = user.id;
+
+    const reply = await processMessage(text, userId, chatId);
     if (reply) await sendMessage(chatId, reply);
   } catch (err) {
     console.error('Error handling update:', err);

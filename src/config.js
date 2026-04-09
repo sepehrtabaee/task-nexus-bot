@@ -11,4 +11,5 @@ export const config = {
   anthropicApiKey: require('ANTHROPIC_API_KEY', process.env.ANTHROPIC_API_KEY),
   webhookSecret: process.env.WEBHOOK_SECRET || null,
   mcpUrl: require('MCP_URL', process.env.MCP_URL),
+  apiUrl: require('API_URL', process.env.API_URL),
 };

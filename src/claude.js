@@ -4,16 +4,18 @@ import { listTools, callTool } from './mcp.js';
 
 const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
 
-function buildSystemPrompt(userId) {
+function buildSystemPrompt(userId, telegramId) {
   return `You are a helpful assistant connected to a task manager.
 Use the available tools to read, create, update, or delete tasks as needed.
-The Telegram user ID of the person you are talking to is: ${userId}.
+The user you are talking to has the following IDs:
+- Internal user ID: ${userId}
+- Telegram ID: ${telegramId}
 Be concise in your responses.`;
 }
 
 // Runs a full agentic loop: sends the user message, handles tool calls,
 // and returns the final text reply (or null if Claude has nothing to say).
-export async function processMessage(userText, userId) {
+export async function processMessage(userText, userId, telegramId) {
   const tools = await listTools();
   const messages = [{ role: 'user', content: userText }];
 
@@ -21,7 +23,7 @@ export async function processMessage(userText, userId) {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
-      system: buildSystemPrompt(userId),
+      system: buildSystemPrompt(userId, telegramId),
       tools,
       messages,
     });
