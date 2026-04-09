@@ -2,6 +2,7 @@ import express from 'express';
 import { config } from './config.js';
 import { parseUpdate, sendMessage, sendTyping } from './telegram.js';
 import { processMessage } from './claude.js';
+import { listTools } from './mcp.js';
 
 const app = express();
 app.use(express.json());
@@ -45,6 +46,17 @@ async function handleUpdate(body) {
 // ── Health check ─────────────────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+// ── MCP tools ────────────────────────────────────────────────────────────────
+
+app.get('/tools', async (_req, res) => {
+  try {
+    const tools = await listTools();
+    res.json({ tools });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ── Local dev only ────────────────────────────────────────────────────────────
 
