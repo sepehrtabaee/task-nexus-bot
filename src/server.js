@@ -24,7 +24,7 @@ app.post('/webhook', async (req, res) => {
 });
 
 async function getUserByTelegramId(chatId) {
-  const res = await fetch(`${config.apiUrl}/telegram/${chatId}`);
+  const res = await fetch(`${config.apiUrl}/users/telegram/${chatId}`);
   if (!res.ok) throw new Error(`Failed to fetch user for chatId ${chatId}: ${res.status}`);
   return res.json();
 }
