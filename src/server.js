@@ -29,6 +29,24 @@ async function getUserByTelegramId(chatId) {
   return res.json();
 }
 
+async function getMessageHistory(userId) {
+  const res = await fetch(`${config.apiUrl}/messages/user/${userId}`);
+  if (!res.ok) {
+    console.warn(`Failed to fetch message history for userId ${userId}: ${res.status}`);
+    return [];
+  }
+  return res.json();
+}
+
+async function saveMessage(userId, role, content) {
+  const res = await fetch(`${config.apiUrl}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, role, content }),
+  });
+  if (!res.ok) console.warn(`Failed to save ${role} message for userId ${userId}: ${res.status}`);
+}
+
 async function handleUpdate(body) {
   const update = parseUpdate(body);
   if (!update) return;
@@ -43,8 +61,15 @@ async function handleUpdate(body) {
     const user = await getUserByTelegramId(chatId);
     const userId = user.id;
 
-    const reply = await processMessage(text, userId, chatId);
-    if (reply) await sendMessage(chatId, reply);
+    const history = await getMessageHistory(userId);
+    const reply = await processMessage(text, userId, chatId, history);
+    if (reply) {
+      await sendMessage(chatId, reply);
+      await Promise.all([
+        saveMessage(userId, 'user', text),
+        saveMessage(userId, 'assistant', reply),
+      ]);
+    }
   } catch (err) {
     console.error('Error handling update:', err);
     await sendMessage(chatId, `Sorry, something went wrong. ${err}`).catch(() => { });

@@ -15,12 +15,13 @@ Be concise in your responses.`;
 
 // Runs a full agentic loop: sends the user message, handles tool calls,
 // and returns the final text reply (or null if Claude has nothing to say).
-export async function processMessage(userText, userId, telegramId) {
+export async function processMessage(userText, userId, telegramId, history = []) {
   const tools = await listTools();
-  const messages = [{ role: 'user', content: userText }];
+  const messages = [...history, { role: 'user', content: userText }];
 
   while (true) {
     const response = await anthropic.messages.create({
+      // claude-haiku-4-5
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: buildSystemPrompt(userId, telegramId),
