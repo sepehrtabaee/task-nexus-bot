@@ -22,7 +22,7 @@ export async function processMessage(userText, userId, telegramId, history = [])
   while (true) {
     const response = await anthropic.messages.create({
       // claude-haiku-4-5
-      model: 'claude-haiku-4-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: buildSystemPrompt(userId, telegramId),
       tools,
