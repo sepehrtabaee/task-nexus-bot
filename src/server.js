@@ -9,7 +9,7 @@ app.use(express.json());
 
 // ── Telegram webhook ─────────────────────────────────────────────────────────
 
-app.post('/webhook', (req, res) => {
+app.post('/webhook', async (req, res) => {
   // Validate the secret token Telegram sends in the header
   if (config.webhookSecret) {
     const token = req.headers['x-telegram-bot-api-secret-token'];
@@ -18,11 +18,9 @@ app.post('/webhook', (req, res) => {
     }
   }
 
-  // Acknowledge immediately so Telegram doesn't retry
+  // Process fully before responding — on serverless, the function is killed after res is sent
+  await handleUpdate(req.body);
   res.sendStatus(200);
-
-  // Process asynchronously — do not await here
-  handleUpdate(req.body);
 });
 
 async function handleUpdate(body) {

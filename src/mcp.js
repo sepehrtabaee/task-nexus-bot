@@ -8,7 +8,10 @@ async function getClient() {
   if (client) return client;
 
   const transport = new StreamableHTTPClientTransport(new URL(config.mcpUrl));
-  client = new Client({ name: 'telegram-claude-bot', version: '1.0.0' });
+  client = new Client(
+    { name: 'telegram-claude-bot', version: '1.0.0' },
+    { timeout: 30000 },
+  );
   await client.connect(transport);
 
   console.log('MCP client connected to', config.mcpUrl);
