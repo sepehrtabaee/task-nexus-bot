@@ -57,11 +57,12 @@ async function handleUpdate(body) {
   try {
     await sendMessage(chatId, `Got your message, working on it`);
     await sendTyping(chatId);
+
+    const user = await getUserByTelegramId(chatId);
+    const userId = user.id;
     await Promise.all([
       saveMessage(userId, 'user', text),
     ]);
-    const user = await getUserByTelegramId(chatId);
-    const userId = user.id;
 
     const history = await getMessageHistory(userId);
     const reply = await processMessage(text, userId, chatId, history);
