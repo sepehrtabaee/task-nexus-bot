@@ -1,10 +1,9 @@
-import 'dotenv/config';
 import express from 'express';
 import { config } from './config.js';
 import { parseUpdate, sendMessage, sendTyping } from './telegram.js';
 import { processMessage } from './claude.js';
 
-const app = express();
+export const app = express();
 app.use(express.json());
 
 // ── Telegram webhook ─────────────────────────────────────────────────────────
@@ -47,11 +46,10 @@ async function handleUpdate(body) {
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-// ── Start ─────────────────────────────────────────────────────────────────────
+// ── Local dev only ────────────────────────────────────────────────────────────
 
-app.listen(config.port, () => {
-  console.log(`Server listening on port ${config.port}`);
-  console.log(`Webhook endpoint: POST /webhook`);
-  console.log(`\nTo register webhook with Telegram, run:`);
-  console.log(`  curl -X POST https://api.telegram.org/bot<TOKEN>/setWebhook -d '{"url":"https://<your-domain>/webhook"}'`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(config.port, () => {
+    console.log(`Server listening on port ${config.port}`);
+  });
+}
