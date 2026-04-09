@@ -1,3 +1,5 @@
+// import dotenv from 'dotenv';
+// dotenv.config();
 function require(name, value) {
   if (!value) throw new Error(`Missing required env var: ${name}`);
   return value;

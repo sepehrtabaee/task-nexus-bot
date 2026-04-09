@@ -33,7 +33,7 @@ async function handleUpdate(body) {
   console.log(`[${from}] ${text}`);
 
   try {
-    await sendMessage(chatId, `Got your message, working on it... (your ID: ${chatId})`);
+    await sendMessage(chatId, `Got your message, working on it`);
     await sendTyping(chatId);
     const reply = await processMessage(text, chatId);
     if (reply) await sendMessage(chatId, reply);
@@ -42,6 +42,18 @@ async function handleUpdate(body) {
     await sendMessage(chatId, `Sorry, something went wrong. ${err}`).catch(() => { });
   }
 }
+
+// ── Test endpoint (Postman) ───────────────────────────────────────────────────
+
+app.post('/test', async (req, res) => {
+  const { chatId, text } = req.body;
+  if (!chatId || !text) {
+    return res.status(400).json({ error: 'chatId and text are required' });
+  }
+
+  res.json({ status: 'processing' });
+  handleUpdate({ message: { chat: { id: chatId }, from: { id: chatId }, text } });
+});
 
 // ── Health check ─────────────────────────────────────────────────────────────
 
