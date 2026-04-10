@@ -26,7 +26,7 @@ app.post('/webhook', async (req, res) => {
 async function getUserByTelegramId(chatId) {
   const res = await fetch(`${config.apiUrl}/users/telegram/${chatId}`);
 
-  if (!res.ok) throw new Error(`You do not have access to this bot : ${res.status}`);
+  if (!res.ok) throw new Error(`You do not have access to this bot.`);
   return res.json();
 }
 
@@ -76,7 +76,7 @@ async function handleUpdate(body) {
     }
   } catch (err) {
     console.error('Error handling update:', err);
-    await sendMessage(chatId, `Sorry, something went wrong. ${err}`).catch(() => { });
+    await sendMessage(chatId, `Error: ${err}`).catch(() => { });
   }
 }
 
