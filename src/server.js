@@ -52,7 +52,6 @@ async function handleUpdate(body) {
   if (!update) return;
 
   const { chatId, text, from } = update;
-  console.log(`[${from}] ${text}`);
 
   try {
     const user = await getUserByTelegramId(chatId);
