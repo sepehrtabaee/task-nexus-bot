@@ -25,7 +25,8 @@ app.post('/webhook', async (req, res) => {
 
 async function getUserByTelegramId(chatId) {
   const res = await fetch(`${config.apiUrl}/users/telegram/${chatId}`);
-  if (!res.ok) throw new Error(`Failed to fetch user for chatId ${chatId}: ${res.status}`);
+
+  if (!res.ok) throw new Error(`You do not have access to this bot : ${res.status}`);
   return res.json();
 }
 
@@ -55,11 +56,12 @@ async function handleUpdate(body) {
   console.log(`[${from}] ${text}`);
 
   try {
-    await sendMessage(chatId, `Got your message, working on it`);
-    await sendTyping(chatId);
-
     const user = await getUserByTelegramId(chatId);
     const userId = user.id;
+
+    await sendMessage(chatId, `Working on it...`);
+    await sendTyping(chatId);
+
     await Promise.all([
       saveMessage(userId, 'user', text),
     ]);
@@ -80,15 +82,15 @@ async function handleUpdate(body) {
 
 // ── Test endpoint (Postman) ───────────────────────────────────────────────────
 
-app.post('/test', async (req, res) => {
-  const { chatId, text } = req.body;
-  if (!chatId || !text) {
-    return res.status(400).json({ error: 'chatId and text are required' });
-  }
+// app.post('/test', async (req, res) => {
+//   const { chatId, text } = req.body;
+//   if (!chatId || !text) {
+//     return res.status(400).json({ error: 'chatId and text are required' });
+//   }
 
-  res.json({ status: 'processing' });
-  handleUpdate({ message: { chat: { id: chatId }, from: { id: chatId }, text } });
-});
+//   res.json({ status: 'processing' });
+//   handleUpdate({ message: { chat: { id: chatId }, from: { id: chatId }, text } });
+// });
 
 // ── Health check ─────────────────────────────────────────────────────────────
 
@@ -96,14 +98,14 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 // ── MCP tools ────────────────────────────────────────────────────────────────
 
-app.get('/tools', async (_req, res) => {
-  try {
-    const tools = await listTools();
-    res.json({ tools });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// app.get('/tools', async (_req, res) => {
+//   try {
+//     const tools = await listTools();
+//     res.json({ tools });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
 
 // ── Local dev only ────────────────────────────────────────────────────────────
 
