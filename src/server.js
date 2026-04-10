@@ -58,7 +58,6 @@ async function handleUpdate(body) {
     const user = await getUserByTelegramId(chatId);
     const userId = user.id;
 
-    await sendMessage(chatId, `Working on it...`);
     await sendTyping(chatId);
 
     await Promise.all([
@@ -82,7 +81,6 @@ async function handleUpdate(body) {
 // ── Health check ─────────────────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
-
 
 
 // ── Local dev only ────────────────────────────────────────────────────────────
