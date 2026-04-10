@@ -76,7 +76,7 @@ async function handleUpdate(body) {
     }
   } catch (err) {
     console.error('Error handling update:', err);
-    await sendMessage(chatId, `Error: ${err}`).catch(() => { });
+    await sendMessage(chatId, `${err}`).catch(() => { });
   }
 }
 
