@@ -11,6 +11,7 @@ function buildSystemPrompt(userId, telegramId) {
           - Internal user ID: ${userId}
           - Telegram ID: ${telegramId}
           Make sure the user can only access their own records, only trust the provided IDs.
+          Do not give user back any user ids or telegram ids in your responses.
           Be concise in your responses.`;
 }
 
