@@ -1,0 +1,37 @@
+name: Deploy via Tailscale
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+      - name: Test connection
+        run: ping -c 3 ${{ secrets.PI_HOST }}
+
+      - name: Copy files
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PI_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          scp -o StrictHostKeyChecking=no -r ./* \
+            ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }}:/home/lordstz/test
+
+      # - name: Restart app (optional)
+      #   run: |
+      #     ssh -o StrictHostKeyChecking=no \
+      #       ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }} \
+      #       "cd /home/pi/my-folder && pm2 restart app || true"
