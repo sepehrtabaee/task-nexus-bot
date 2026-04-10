@@ -15,7 +15,7 @@ async function apiCall(method, body) {
 }
 
 export function sendMessage(chatId, text) {
-  return apiCall('sendMessage', { chat_id: chatId, text });
+  return apiCall('sendMessage', { chat_id: chatId, text, parse_mode: 'Markdown' });
 }
 
 export function sendTyping(chatId) {
