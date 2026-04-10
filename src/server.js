@@ -8,7 +8,6 @@ const app = express();
 app.use(express.json());
 
 // ── Telegram webhook ─────────────────────────────────────────────────────────
-
 app.post('/webhook', async (req, res) => {
   // Validate the secret token Telegram sends in the header
   if (config.webhookSecret) {
@@ -80,32 +79,11 @@ async function handleUpdate(body) {
   }
 }
 
-// ── Test endpoint (Postman) ───────────────────────────────────────────────────
-
-// app.post('/test', async (req, res) => {
-//   const { chatId, text } = req.body;
-//   if (!chatId || !text) {
-//     return res.status(400).json({ error: 'chatId and text are required' });
-//   }
-
-//   res.json({ status: 'processing' });
-//   handleUpdate({ message: { chat: { id: chatId }, from: { id: chatId }, text } });
-// });
-
 // ── Health check ─────────────────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-// ── MCP tools ────────────────────────────────────────────────────────────────
 
-// app.get('/tools', async (_req, res) => {
-//   try {
-//     const tools = await listTools();
-//     res.json({ tools });
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// });
 
 // ── Local dev only ────────────────────────────────────────────────────────────
 
