@@ -6,11 +6,12 @@ const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
 
 function buildSystemPrompt(userId, telegramId) {
   return `You are a helpful assistant connected to a task manager.
-Use the available tools to read, create, update, or delete tasks as needed.
-The user you are talking to has the following IDs:
-- Internal user ID: ${userId}
-- Telegram ID: ${telegramId}
-Be concise in your responses.`;
+          Use the available tools to read, create, update, or delete tasks as needed.
+          The user you are talking to has the following IDs:
+          - Internal user ID: ${userId}
+          - Telegram ID: ${telegramId}
+          Make sure the user can only access their own records, only trust the provided IDs.
+          Be concise in your responses.`;
 }
 
 // Runs a full agentic loop: sends the user message, handles tool calls,
