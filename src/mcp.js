@@ -7,7 +7,11 @@ let client = null;
 async function getClient() {
   if (client) return client;
 
-  const transport = new StreamableHTTPClientTransport(new URL(config.mcpUrl));
+  const transport = new StreamableHTTPClientTransport(new URL(config.mcpUrl), {
+    requestInit: {
+      headers: { 'Authorization': `Bearer ${config.mcpToken}` },
+    },
+  });
   client = new Client(
     { name: 'telegram-claude-bot', version: '1.0.0' },
     { timeout: 30000 },

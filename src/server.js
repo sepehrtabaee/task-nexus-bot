@@ -22,15 +22,21 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
+const apiHeaders = () => ({ 'Authorization': `Bearer ${config.apiToken}` });
+
 async function getUserByTelegramId(chatId) {
-  const res = await fetch(`${config.apiUrl}/users/telegram/${chatId}`);
+  const res = await fetch(`${config.apiUrl}/users/telegram/${chatId}`, {
+    headers: apiHeaders(),
+  });
 
   if (!res.ok) throw new Error(`You do not have access to this bot.`);
   return res.json();
 }
 
 async function getMessageHistory(userId) {
-  const res = await fetch(`${config.apiUrl}/messages/user/${userId}`);
+  const res = await fetch(`${config.apiUrl}/messages/user/${userId}`, {
+    headers: apiHeaders(),
+  });
   if (!res.ok) {
     console.warn(`Failed to fetch message history for userId ${userId}: ${res.status}`);
     return [];
@@ -41,7 +47,7 @@ async function getMessageHistory(userId) {
 async function saveMessage(userId, role, content) {
   const res = await fetch(`${config.apiUrl}/messages`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_id: userId, role, content }),
   });
   if (!res.ok) console.warn(`Failed to save ${role} message for userId ${userId}: ${res.status}`);
