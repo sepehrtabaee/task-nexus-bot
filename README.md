@@ -17,6 +17,7 @@ This is the **mobile entry-point for TaskNexus** — a Telegram bot that lets yo
 ## Key Features
 
 - **Natural language task adding** — tell the bot what to do in plain English; Claude interprets it and creates the task via the MCP backend.
+- **Voice message support** — send a voice note and the bot transcribes it via OpenAI's `gpt-4o-mini-transcribe`, then handles it like any other message.
 - **Quick-view today's list** — ask "what's on my list?" and get a summary in chat.
 - **Full agentic loop** — the bot uses Claude with MCP tool-calling to read, create, update, and delete tasks on your behalf.
 - **Persistent conversation history** — message context is stored per-user so follow-up requests work naturally.
@@ -27,10 +28,10 @@ This is the **mobile entry-point for TaskNexus** — a Telegram bot that lets yo
 ## Architecture
 
 ```
-Telegram  →  /webhook (Express)  →  Claude (claude-sonnet-4-6)  →  MCP Server  →  TaskNexus API
+Telegram  →  /webhook (Express)  →  [Whisper transcription if voice]  →  Claude (claude-sonnet-4-6)  →  MCP Server  →  TaskNexus API
 ```
 
-The bot receives Telegram updates via a webhook, passes them through an agentic Claude loop that can call MCP tools, and sends the final reply back to the user.
+The bot receives Telegram updates via a webhook. Voice messages are downloaded from Telegram and transcribed via OpenAI's `gpt-4o-mini-transcribe` before entering the Claude loop. The agentic Claude loop can call MCP tools, and sends the final reply back to the user.
 
 ---
 
@@ -64,6 +65,7 @@ Create a `.env` file (or set these in your Vercel project settings):
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | Token from BotFather |
 | `ANTHROPIC_API_KEY` | Your Anthropic API key |
+| `OPENAI_API_KEY` | OpenAI API key — used to transcribe voice messages |
 | `WEBHOOK_SECRET` | Random secret for webhook validation (recommended) |
 | `MCP_URL` | URL of your TaskNexus MCP server |
 | `API_URL` | URL of your TaskNexus REST API |
@@ -82,7 +84,7 @@ Use a tunnel (e.g. `ngrok`) to expose your local server and point the Telegram w
 
 ## Command List
 
-The bot is conversational — there are no rigid slash commands. Just talk to it naturally. Examples:
+The bot is conversational — there are no rigid slash commands. Just talk to it naturally, either by typing or by sending a voice message. Examples:
 
 | What you type | What happens |
 |---|---|

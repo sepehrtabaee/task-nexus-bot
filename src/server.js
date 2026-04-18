@@ -1,7 +1,8 @@
 import express from 'express';
 import { config } from './config.js';
-import { parseUpdate, sendMessage, sendTyping } from './telegram.js';
+import { parseUpdate, sendMessage, sendTyping, downloadFile } from './telegram.js';
 import { processMessage } from './claude.js';
+import { transcribeAudio } from './transcribe.js';
 import { listTools } from './mcp.js';
 
 const app = express();
@@ -53,11 +54,24 @@ async function saveMessage(userId, role, content) {
   if (!res.ok) console.warn(`Failed to save ${role} message for userId ${userId}: ${res.status}`);
 }
 
+async function resolveText(update) {
+  if (update.type === 'text') return update.text;
+
+  if (update.type === 'voice') {
+    const { buffer, filename } = await downloadFile(update.fileId);
+    const transcript = await transcribeAudio(buffer, filename, update.mimeType);
+    if (!transcript?.trim()) throw new Error("Couldn't transcribe that voice message — try again?");
+    return `🎤 ${transcript}`;
+  }
+
+  return null;
+}
+
 async function handleUpdate(body) {
   const update = parseUpdate(body);
   if (!update) return;
 
-  const { chatId, text, from } = update;
+  const { chatId } = update;
 
   try {
     const user = await getUserByTelegramId(chatId);
@@ -65,17 +79,16 @@ async function handleUpdate(body) {
 
     await sendTyping(chatId);
 
-    await Promise.all([
-      saveMessage(userId, 'user', text),
-    ]);
+    const text = await resolveText(update);
+    if (!text) return;
+
+    await saveMessage(userId, 'user', text);
 
     const history = await getMessageHistory(userId);
     const reply = await processMessage(text, userId, chatId, history);
     if (reply) {
       await sendMessage(chatId, reply);
-      await Promise.all([
-        saveMessage(userId, 'assistant', reply),
-      ]);
+      await saveMessage(userId, 'assistant', reply);
     }
   } catch (err) {
     console.error('Error handling update:', err);
