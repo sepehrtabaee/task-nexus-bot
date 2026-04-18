@@ -61,7 +61,6 @@ async function resolveText(update) {
     const { buffer, filename } = await downloadFile(update.fileId);
     const transcript = await transcribeAudio(buffer, filename, update.mimeType);
     if (!transcript?.trim()) throw new Error("Couldn't transcribe that voice message — try again?");
-    await sendMessage(update.chatId, `🎤 _${transcript}_`);
     return transcript;
   }
 
