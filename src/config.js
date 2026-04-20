@@ -7,6 +7,7 @@ function require(name, value) {
 
 export const config = {
   port: process.env.PORT || 3000,
+  llmProvider: process.env.LLM_PROVIDER || 'anthropic',
   anthropicApiKey: require('ANTHROPIC_API_KEY', process.env.ANTHROPIC_API_KEY),
   telegramToken: require('TELEGRAM_BOT_TOKEN', process.env.TELEGRAM_BOT_TOKEN),
   openaiApiKey: require('OPENAI_API_KEY', process.env.OPENAI_API_KEY),

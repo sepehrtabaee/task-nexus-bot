@@ -1,9 +1,13 @@
 import express from 'express';
 import { config } from './config.js';
 import { parseUpdate, sendMessage, sendTyping, downloadFile } from './telegram.js';
-import { processMessage } from './claude.js';
+import { processMessage as processWithClaude } from './claude.js';
+import { processMessage as processWithGpt } from './gpt.js';
 import { transcribeAudio } from './transcribe.js';
 import { listTools } from './mcp.js';
+
+const processMessage = config.llmProvider === 'openai' ? processWithGpt : processWithClaude;
+console.log(`LLM provider: ${config.llmProvider}`);
 
 const app = express();
 app.use(express.json());
