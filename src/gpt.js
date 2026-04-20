@@ -56,7 +56,7 @@ export async function processMessage(userText, userId, telegramId, history = [])
   while (true) {
     const response = await chatCompletion({
       model: 'gpt-5-mini',
-      max_tokens: 4096,
+      max_completion_tokens: 4096,
       tools,
       messages,
     });
