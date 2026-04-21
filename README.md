@@ -16,10 +16,11 @@ This is the **mobile entry-point for TaskNexus** — a Telegram bot that lets yo
 
 ## Key Features
 
-- **Natural language task adding** — tell the bot what to do in plain English; Claude interprets it and creates the task via the MCP backend.
+- **Natural language task adding** — tell the bot what to do in plain English; the chosen LLM interprets it and creates the task via the MCP backend.
+- **Pluggable LLM provider** — runs on either Anthropic (Claude) or OpenAI (GPT), selectable via the `LLM_PROVIDER` env var.
 - **Voice message support** — send a voice note and the bot transcribes it via OpenAI's `gpt-4o-mini-transcribe`, then handles it like any other message.
 - **Quick-view today's list** — ask "what's on my list?" and get a summary in chat.
-- **Full agentic loop** — the bot uses Claude with MCP tool-calling to read, create, update, and delete tasks on your behalf.
+- **Full agentic loop** — the bot uses MCP tool-calling to read, create, update, and delete tasks on your behalf.
 - **Persistent conversation history** — message context is stored per-user so follow-up requests work naturally.
 - **Serverless-ready** — deployed on Vercel; the Express server doubles as a serverless function handler.
 
@@ -28,10 +29,15 @@ This is the **mobile entry-point for TaskNexus** — a Telegram bot that lets yo
 ## Architecture
 
 ```
-Telegram  →  /webhook (Express)  →  [Whisper transcription if voice]  →  Claude (claude-sonnet-4-6)  →  MCP Server  →  TaskNexus API
+Telegram  →  /webhook (Express)  →  [Whisper transcription if voice]  →  LLM (Claude or GPT)  →  MCP Server  →  TaskNexus API
 ```
 
-The bot receives Telegram updates via a webhook. Voice messages are downloaded from Telegram and transcribed via OpenAI's `gpt-4o-mini-transcribe` before entering the Claude loop. The agentic Claude loop can call MCP tools, and sends the final reply back to the user.
+The bot receives Telegram updates via a webhook. Voice messages are downloaded from Telegram and transcribed via OpenAI's `gpt-4o-mini-transcribe` before entering the agent loop. The LLM layer is pluggable:
+
+- **Anthropic** (default) — [src/claude.js](src/claude.js) uses `claude-sonnet-4-6` with Anthropic's native MCP tool schema.
+- **OpenAI** — [src/gpt.js](src/gpt.js) uses `gpt-5-mini` via the Chat Completions API, with MCP tools adapted to OpenAI's `function` schema.
+
+The active provider is chosen at startup in [src/server.js](src/server.js) based on `LLM_PROVIDER`. Both paths run the same agentic tool-calling loop and hit the same MCP server.
 
 ---
 
@@ -64,12 +70,17 @@ Create a `.env` file (or set these in your Vercel project settings):
 | Variable | Description |
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | Token from BotFather |
-| `ANTHROPIC_API_KEY` | Your Anthropic API key |
-| `OPENAI_API_KEY` | OpenAI API key — used to transcribe voice messages |
+| `LLM_PROVIDER` | Which LLM to use: `anthropic` (default) or `openai` |
+| `ANTHROPIC_API_KEY` | Anthropic API key — required for the Claude agent loop |
+| `OPENAI_API_KEY` | OpenAI API key — required for voice transcription, and for the GPT agent loop when `LLM_PROVIDER=openai` |
 | `WEBHOOK_SECRET` | Random secret for webhook validation (recommended) |
 | `MCP_URL` | URL of your TaskNexus MCP server |
+| `MCP_TOKEN` | Bearer token for the MCP server |
 | `API_URL` | URL of your TaskNexus REST API |
+| `API_TOKEN` | Bearer token for the TaskNexus REST API |
 | `PORT` | Local dev port (default: `3000`) |
+
+> Both `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` are validated at startup regardless of `LLM_PROVIDER`: OpenAI is always used for voice transcription, and Anthropic is kept wired in so you can flip providers without redeploying with new secrets.
 
 ### 4. Run Locally
 
@@ -104,4 +115,4 @@ Access is restricted at two layers:
 
 2. **User ID filtering via the API** — when an update arrives, the bot looks up the Telegram `chat_id` against the TaskNexus user database (`GET /users/telegram/:chatId`). If no matching user exists, the request is rejected with an error message. This ensures only registered users can interact with the bot, even if the webhook URL were discovered by a third party.
 
-3. **Claude system prompt enforcement** — the Claude agent is explicitly instructed in its system prompt to only access records belonging to the authenticated user (identified by their internal user ID and Telegram ID), to never trust user-supplied IDs, and to never expose any user or Telegram IDs in its responses. This acts as a guardrail at the AI layer, preventing prompt injection attempts from tricking the agent into reading or modifying another user's data.
+3. **LLM system prompt enforcement** — both the Claude and GPT agents are explicitly instructed in their system prompts to only access records belonging to the authenticated user (identified by their internal user ID and Telegram ID), to never trust user-supplied IDs, and to never expose any user or Telegram IDs in their responses. This acts as a guardrail at the AI layer, preventing prompt injection attempts from tricking the agent into reading or modifying another user's data.
