@@ -15,8 +15,5 @@ export const config = {
   mcpUrl: require('MCP_URL', process.env.MCP_URL),
   mcpToken: require('MCP_TOKEN', process.env.MCP_TOKEN),
   apiUrl: require('API_URL', process.env.API_URL),
-  supabaseUrl: require('SUPABASE_URL', process.env.SUPABASE_URL),
-  supabaseAnonKey: require('SUPABASE_ANON_KEY', process.env.SUPABASE_ANON_KEY),
-  supabaseBotEmail: require('SUPABASE_BOT_EMAIL', process.env.SUPABASE_BOT_EMAIL),
-  supabaseBotPassword: require('SUPABASE_BOT_PASSWORD', process.env.SUPABASE_BOT_PASSWORD),
+  apiToken: require('API_TOKEN', process.env.API_TOKEN),
 };
