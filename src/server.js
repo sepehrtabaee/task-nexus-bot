@@ -5,6 +5,7 @@ import { processMessage as processWithClaude } from './claude.js';
 import { processMessage as processWithGpt } from './gpt.js';
 import { transcribeAudio } from './transcribe.js';
 import { listTools } from './mcp.js';
+import { getAuthToken } from './supabase.js';
 
 const processMessage = config.llmProvider === 'openai' ? processWithGpt : processWithClaude;
 console.log(`LLM provider: ${config.llmProvider}`);
@@ -27,20 +28,20 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
-const apiHeaders = () => ({ 'Authorization': `Bearer ${config.apiToken}` });
+const apiHeaders = async () => ({ 'Authorization': `Bearer ${await getAuthToken()}` });
 
 async function getUserByTelegramId(chatId) {
   const res = await fetch(`${config.apiUrl}/users/telegram/${chatId}`, {
-    headers: apiHeaders(),
+    headers: await apiHeaders(),
   });
 
-  if (!res.ok) throw new Error(`You do not have access to this bot.`);
+  if (!res.ok) throw new Error(`You do not have access to this bot. (${res.status})`);
   return res.json();
 }
 
 async function getMessageHistory(userId) {
   const res = await fetch(`${config.apiUrl}/messages/user/${userId}`, {
-    headers: apiHeaders(),
+    headers: await apiHeaders(),
   });
   if (!res.ok) {
     console.warn(`Failed to fetch message history for userId ${userId}: ${res.status}`);
@@ -52,7 +53,7 @@ async function getMessageHistory(userId) {
 async function saveMessage(userId, role, content) {
   const res = await fetch(`${config.apiUrl}/messages`, {
     method: 'POST',
-    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
+    headers: { ...await apiHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_id: userId, role, content }),
   });
   if (!res.ok) console.warn(`Failed to save ${role} message for userId ${userId}: ${res.status}`);
