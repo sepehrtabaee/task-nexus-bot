@@ -4,10 +4,11 @@ import { config } from '../config.js';
 
 export function getModel() {
   if (config.llmProvider === 'openai') {
+    // gpt-5-mini is a reasoning model: requires `max_completion_tokens`, rejects `max_tokens`.
     return new ChatOpenAI({
       apiKey: config.openaiApiKey,
       model: 'gpt-5-mini',
-      maxTokens: 4096,
+      modelKwargs: { max_completion_tokens: 4096 },
     });
   }
 
