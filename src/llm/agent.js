@@ -1,5 +1,4 @@
 import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
-import { tool } from '@langchain/core/tools';
 import { listTools, callTool } from '../mcp.js';
 import { getModel } from './provider.js';
 
@@ -14,21 +13,19 @@ function buildSystemPrompt(userId, telegramId) {
           Be concise in your responses.`;
 }
 
-async function loadTools() {
+// Returns OpenAI-format tool defs. Both ChatOpenAI and ChatAnthropic bindTools
+// accept this shape and translate internally — avoids the Zod path that
+// chokes on JSON Schema from MCP.
+async function loadToolDefs() {
   const mcpTools = await listTools();
-  return mcpTools.map((t) =>
-    tool(
-      async (input) => {
-        const result = await callTool(t.name, input);
-        return JSON.stringify(result.content);
-      },
-      {
-        name: t.name,
-        description: t.description,
-        schema: t.input_schema,
-      },
-    ),
-  );
+  return mcpTools.map((t) => ({
+    type: 'function',
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.input_schema,
+    },
+  }));
 }
 
 function toLangChainHistory(history) {
@@ -47,8 +44,7 @@ function extractText(content) {
 }
 
 export async function processMessage(userText, userId, telegramId, history = []) {
-  const tools = await loadTools();
-  const toolsByName = Object.fromEntries(tools.map((t) => [t.name, t]));
+  const tools = await loadToolDefs();
   const llm = getModel().bindTools(tools);
 
   const messages = [
@@ -68,8 +64,10 @@ export async function processMessage(userText, userId, telegramId, history = [])
     for (const call of ai.tool_calls) {
       console.log(`[tool] ${call.name}`, call.args);
       try {
-        const content = await toolsByName[call.name].invoke(call.args);
-        messages.push(new ToolMessage({ content, tool_call_id: call.id }));
+        const result = await callTool(call.name, call.args);
+        messages.push(
+          new ToolMessage({ content: JSON.stringify(result.content), tool_call_id: call.id }),
+        );
       } catch (err) {
         console.error(`[tool] ${call.name} failed:`, err.message);
         messages.push(
