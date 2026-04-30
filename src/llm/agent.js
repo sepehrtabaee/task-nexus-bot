@@ -1,10 +1,41 @@
 import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
 import { listTools, callTool } from '../mcp.js';
+import { breakDownTask } from '../graphs/breakdown.js';
 import { getModel } from './provider.js';
+
+const BREAKDOWN_TOOL_NAME = 'break_down_task';
+
+const breakdownToolDef = {
+  type: 'function',
+  function: {
+    name: BREAKDOWN_TOOL_NAME,
+    description:
+      'Break a high-level goal into concrete, ordered subtasks and create them in the task manager. ' +
+      'Only call when the user explicitly asks to break down, decompose, or plan out a goal ' +
+      '(e.g. "break down learning guitar"). Do NOT call for normal task creation.',
+    parameters: {
+      type: 'object',
+      properties: {
+        goal: {
+          type: 'string',
+          description: 'The high-level goal stated by the user, e.g. "learn guitar".',
+        },
+        parentTaskId: {
+          type: 'string',
+          description: 'Optional ID of an existing parent task these subtasks belong under.',
+        },
+      },
+      required: ['goal'],
+      additionalProperties: false,
+    },
+  },
+};
 
 function buildSystemPrompt(userId, telegramId) {
   return `You are a helpful assistant connected to a task manager.
           Use the available tools to read, create, update, or delete tasks as needed.
+          When the user explicitly asks to break down, decompose, or plan out a goal,
+          call the ${BREAKDOWN_TOOL_NAME} tool instead of creating tasks one by one.
           The user you are talking to has the following IDs:
           - Internal user ID: ${userId}
           - Telegram ID: ${telegramId}
@@ -18,7 +49,7 @@ function buildSystemPrompt(userId, telegramId) {
 // chokes on JSON Schema from MCP.
 async function loadToolDefs() {
   const mcpTools = await listTools();
-  return mcpTools.map((t) => ({
+  const mcpDefs = mcpTools.map((t) => ({
     type: 'function',
     function: {
       name: t.name,
@@ -26,6 +57,7 @@ async function loadToolDefs() {
       parameters: t.input_schema,
     },
   }));
+  return [...mcpDefs, breakdownToolDef];
 }
 
 function toLangChainHistory(history) {
@@ -41,6 +73,19 @@ function extractText(content) {
     return content.find((b) => b.type === 'text')?.text ?? null;
   }
   return null;
+}
+
+async function dispatchTool(call, { userId, telegramId }) {
+  if (call.name === BREAKDOWN_TOOL_NAME) {
+    const summary = await breakDownTask({
+      goal: call.args.goal,
+      parentTaskId: call.args.parentTaskId,
+      userId,
+      telegramId,
+    });
+    return { content: summary };
+  }
+  return callTool(call.name, call.args);
 }
 
 export async function processMessage(userText, userId, telegramId, history = []) {
@@ -64,7 +109,7 @@ export async function processMessage(userText, userId, telegramId, history = [])
     for (const call of ai.tool_calls) {
       console.log(`[tool] ${call.name}`, call.args);
       try {
-        const result = await callTool(call.name, call.args);
+        const result = await dispatchTool(call, { userId, telegramId });
         messages.push(
           new ToolMessage({ content: JSON.stringify(result.content), tool_call_id: call.id }),
         );
