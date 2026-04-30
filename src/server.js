@@ -99,6 +99,30 @@ async function handleUpdate(body) {
   }
 }
 
+// ── Direct chat (bypass Telegram webhook, for debugging) ─────────────────────
+// POST /chat { text, telegramId, history? }
+// Optional: same x-telegram-bot-api-secret-token header check as /webhook.
+app.post('/chat', async (req, res) => {
+  if (config.telegramToken) {
+    const token = req.headers['x-telegram-bot-api-secret-token'];
+    if (token !== config.telegramToken) return res.sendStatus(403);
+  }
+
+  const { text, telegramId, history } = req.body ?? {};
+  if (!text || !telegramId) {
+    return res.status(400).json({ error: 'text and telegramId are required' });
+  }
+
+  try {
+    const user = await getUserByTelegramId(telegramId);
+    const reply = await processMessage(text, user.id, telegramId, history ?? []);
+    res.json({ reply });
+  } catch (err) {
+    console.error('Error in /chat:', err);
+    res.status(500).json({ error: String(err?.message ?? err) });
+  }
+});
+
 // ── Health check ─────────────────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

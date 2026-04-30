@@ -34,6 +34,7 @@ const State = Annotation.Root({
 });
 
 async function planNode(state) {
+  console.log(`[breakdown:plan] iter=${state.iterations ?? 0} hasCritique=${!!state.critique}`);
   const llm = getModel().withStructuredOutput(PlanSchema, { name: 'plan' });
 
   const critiqueLine = state.critique
@@ -50,6 +51,7 @@ Rules:
 - 3-7 subtasks is usually right; never fewer than 2 or more than 10.${critiqueLine}`;
 
   const result = await llm.invoke([new HumanMessage(prompt)]);
+  console.log(`[breakdown:plan] produced ${result.subtasks?.length ?? 0} subtasks`);
   return { subtasks: result.subtasks };
 }
 
@@ -64,6 +66,7 @@ ${state.subtasks.map((s) => `${s.order}. ${s.title} — ${s.description}`).join(
 Approve only if EVERY subtask is concrete and actionable (something the user can start today without further planning). Reject if any subtask is vague, redundant, or assumes another step that wasn't listed. When rejecting, give one short paragraph of feedback the planner can act on.`;
 
   const result = await llm.invoke([new HumanMessage(prompt)]);
+  console.log(`[breakdown:refine] approved=${result.approved} iter=${(state.iterations ?? 0) + 1}`);
   return {
     approved: result.approved,
     critique: result.feedback,
@@ -81,6 +84,7 @@ function refineRouter(state) {
 // scoped to creating these subtasks. Lets the LLM figure out the right MCP tool
 // signature without us hardcoding it here.
 async function persistNode(state) {
+  console.log(`[breakdown:persist] persisting ${state.subtasks?.length ?? 0} subtasks (approved=${state.approved})`);
   const mcpTools = await listTools();
   const toolDefs = mcpTools.map((t) => ({
     type: 'function',
@@ -104,10 +108,14 @@ When every subtask has been created, reply with a one-line confirmation and stop
   const created = [];
 
   for (let step = 0; step < 20; step++) {
+    console.log(`[breakdown:persist] step=${step} invoking llm (messages=${messages.length})`);
     const ai = await llm.invoke(messages);
     messages.push(ai);
 
-    if (!ai.tool_calls?.length) break;
+    if (!ai.tool_calls?.length) {
+      console.log(`[breakdown:persist] step=${step} done, no tool calls`);
+      break;
+    }
 
     for (const call of ai.tool_calls) {
       console.log(`[breakdown:persist] ${call.name}`, call.args);

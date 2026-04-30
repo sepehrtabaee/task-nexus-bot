@@ -89,6 +89,7 @@ async function dispatchTool(call, { userId, telegramId }) {
 }
 
 export async function processMessage(userText, userId, telegramId, history = []) {
+  console.log(`[agent] processMessage userId=${userId} historyLen=${history.length} text=${JSON.stringify(userText).slice(0, 120)}`);
   const tools = await loadToolDefs();
   const llm = getModel().bindTools(tools);
 
@@ -98,14 +99,19 @@ export async function processMessage(userText, userId, telegramId, history = [])
     new HumanMessage(userText),
   ];
 
+  let iter = 0;
   while (true) {
+    iter += 1;
+    console.log(`[agent] iter=${iter} invoking llm (messages=${messages.length})`);
     const ai = await llm.invoke(messages);
     messages.push(ai);
 
     if (!ai.tool_calls?.length) {
+      console.log(`[agent] iter=${iter} done, no tool calls`);
       return extractText(ai.content);
     }
 
+    console.log(`[agent] iter=${iter} llm requested ${ai.tool_calls.length} tool call(s)`);
     for (const call of ai.tool_calls) {
       console.log(`[tool] ${call.name}`, call.args);
       try {
