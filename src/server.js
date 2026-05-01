@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json());
 
 // ── Telegram webhook ─────────────────────────────────────────────────────────
-app.post('/webhook', async (req, res) => {
+app.post('/webhook', (req, res) => {
   // Validate the secret token Telegram sends in the header
   if (config.webhookSecret) {
     const token = req.headers['x-telegram-bot-api-secret-token'];
@@ -20,8 +20,9 @@ app.post('/webhook', async (req, res) => {
     }
   }
 
-  // Process fully before responding — on serverless, the function is killed after res is sent
-  await handleUpdate(req.body);
+  // Ack Telegram immediately; the long-running App Service process keeps
+  // handleUpdate going in the background after the response is sent.
+  handleUpdate(req.body).catch((err) => console.error('handleUpdate failed:', err));
   res.sendStatus(200);
 });
 
@@ -128,12 +129,8 @@ app.post('/chat', async (req, res) => {
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 
-// ── Local dev only ────────────────────────────────────────────────────────────
-
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(config.port, () => {
-    console.log(`Server listening on port ${config.port}`);
-  });
-}
+app.listen(config.port, () => {
+  console.log(`Server listening on port ${config.port}`);
+});
 
 export default app;
