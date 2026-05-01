@@ -17,7 +17,8 @@ This is the **mobile entry-point for TaskNexus** — a Telegram bot that lets yo
 ## Key Features
 
 - **Natural language task adding** — tell the bot what to do in plain English; the chosen LLM interprets it and creates the task via the MCP backend.
-- **Pluggable LLM provider** — runs on either Anthropic (Claude) or OpenAI (GPT), selectable via the `LLM_PROVIDER` env var.
+- **Pluggable LLM provider** — runs on either Anthropic (Claude) or OpenAI (GPT), selectable via the `LLM_PROVIDER` env var. Both providers go through a single LangChain agent loop.
+- **LangGraph-driven task breakdown** — ask the bot to break down a high-level goal and a dedicated LangGraph workflow plans → critiques → refines → persists subtasks via MCP.
 - **Voice message support** — send a voice note and the bot transcribes it via OpenAI's `gpt-4o-mini-transcribe`, then handles it like any other message.
 - **Quick-view today's list** — ask "what's on my list?" and get a summary in chat.
 - **Full agentic loop** — the bot uses MCP tool-calling to read, create, update, and delete tasks on your behalf.
@@ -29,15 +30,40 @@ This is the **mobile entry-point for TaskNexus** — a Telegram bot that lets yo
 ## Architecture
 
 ```
-Telegram  →  /webhook (Express)  →  [Whisper transcription if voice]  →  LLM (Claude or GPT)  →  MCP Server  →  TaskNexus API
+Telegram  →  /webhook (Express)  →  [Whisper transcription if voice]  →  LangChain Agent (Claude or GPT)  →  MCP Server  →  TaskNexus API
+                                                                              │
+                                                                              └─→  break_down_task tool  →  LangGraph (plan → refine → persist)
 ```
 
-The bot receives Telegram updates via a webhook. Voice messages are downloaded from Telegram and transcribed via OpenAI's `gpt-4o-mini-transcribe` before entering the agent loop. The LLM layer is pluggable:
+The bot receives Telegram updates via a webhook. Voice messages are downloaded from Telegram and transcribed via OpenAI's `gpt-4o-mini-transcribe` before entering the agent loop.
 
-- **Anthropic** (default) — [src/claude.js](src/claude.js) uses `claude-sonnet-4-6` with Anthropic's native MCP tool schema.
-- **OpenAI** — [src/gpt.js](src/gpt.js) uses `gpt-5-mini` via the Chat Completions API, with MCP tools adapted to OpenAI's `function` schema.
+### LangChain agent layer
 
-The active provider is chosen at startup in [src/server.js](src/server.js) based on `LLM_PROVIDER`. Both paths run the same agentic tool-calling loop and hit the same MCP server.
+The agent loop lives in [src/llm/agent.js](src/llm/agent.js) and is provider-agnostic. It builds a single tool-calling loop using LangChain's message types (`SystemMessage`, `HumanMessage`, `AIMessage`, `ToolMessage`) and `bindTools`. The chat model is constructed in [src/llm/provider.js](src/llm/provider.js):
+
+- **Anthropic** (default) — `ChatAnthropic` running `claude-sonnet-4-6`.
+- **OpenAI** — `ChatOpenAI` running `gpt-5-mini` (reasoning model; uses `max_completion_tokens`).
+
+Tool definitions are loaded from the MCP server in OpenAI's `function` schema shape — both `ChatAnthropic.bindTools` and `ChatOpenAI.bindTools` accept this format and translate it internally, which lets us avoid the Zod path that chokes on raw JSON Schema coming from MCP.
+
+### LangGraph: task breakdown workflow
+
+When the user asks to break down or decompose a goal, the agent calls a special `break_down_task` tool that hands off to a LangGraph `StateGraph` defined in [src/graphs/breakdown.js](src/graphs/breakdown.js):
+
+```
+START → plan → refine ──approved? yes──→ persist → END
+                  │
+                  └──approved? no & iterations < 2──→ plan
+                  └──iterations >= 2──→ persist (best effort)
+```
+
+- **plan** — uses `withStructuredOutput(PlanSchema)` (Zod) to produce 2–10 ordered, concrete subtasks. On retries the previous critique is fed back in.
+- **refine** — uses `withStructuredOutput(CritiqueSchema)` to act as a quality reviewer; approves only when every subtask is concrete and actionable, otherwise returns one paragraph of feedback.
+- **persist** — runs its own scoped tool-calling loop using the MCP `create-task` tool to write each subtask as a real task in TaskNexus, optionally under a parent task.
+
+The graph is bounded (`MAX_REFINE_ITERATIONS = 2`) so it always terminates: at worst it persists the best plan it has after two refinement passes. State is shared via a typed `Annotation.Root` that carries the `goal`, `parentTaskId`, `userId`, `telegramId`, the current `subtasks`, the latest `critique`, the iteration counter, and the list of `created` tasks.
+
+The active LLM provider is chosen once at startup in [src/server.js](src/server.js) based on `LLM_PROVIDER`; both the main agent and the LangGraph nodes pull from the same `getModel()` factory, so flipping providers swaps both paths together.
 
 ---
 
@@ -104,6 +130,7 @@ The bot is conversational — there are no rigid slash commands. Just talk to it
 | `Mark "review the PR" as done` | Updates the task status to complete |
 | `Delete the task about the PR` | Removes the task |
 | `Show all my open tasks` | Lists all incomplete tasks |
+| `Break down learning guitar into subtasks` | Triggers the LangGraph plan → refine → persist workflow and creates each subtask as its own task |
 
 ---
 
