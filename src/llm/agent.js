@@ -20,9 +20,9 @@ const breakdownToolDef = {
           type: 'string',
           description: 'The high-level goal stated by the user, e.g. "learn guitar".',
         },
-        parentTaskId: {
+        listId: {
           type: 'string',
-          description: 'Optional ID of an existing parent task these subtasks belong under.',
+          description: 'Optional ID of the list these subtasks should be created under.',
         },
       },
       required: ['goal'],
@@ -79,7 +79,7 @@ async function dispatchTool(call, { userId, telegramId }) {
   if (call.name === BREAKDOWN_TOOL_NAME) {
     const summary = await breakDownTask({
       goal: call.args.goal,
-      parentTaskId: call.args.parentTaskId,
+      listId: call.args.listId,
       userId,
       telegramId,
     });

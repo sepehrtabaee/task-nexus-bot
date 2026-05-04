@@ -23,7 +23,7 @@ const CritiqueSchema = z.object({
 
 const State = Annotation.Root({
   goal: Annotation(),
-  parentTaskId: Annotation(),
+  listId: Annotation(),
   userId: Annotation(),
   telegramId: Annotation(),
   subtasks: Annotation(),
@@ -94,7 +94,7 @@ async function persistNode(state) {
 
   const system = `You are creating tasks in a task manager via MCP tools.
 The user's internal ID is ${state.userId} and Telegram ID is ${state.telegramId}.${
-    state.parentTaskId ? ` These subtasks belong to parent task ${state.parentTaskId}.` : ''
+    state.listId ? ` These subtasks belong to list ID ${state.listId}.` : ''
   }
 Create each subtask below as its own task. Use the create-task tool from your tool list.
 Only create tasks — do not read, update, or delete anything else.
@@ -147,8 +147,8 @@ const graph = new StateGraph(State)
   .addEdge('persist', END)
   .compile();
 
-export async function breakDownTask({ goal, parentTaskId, userId, telegramId }) {
-  const final = await graph.invoke({ goal, parentTaskId, userId, telegramId });
+export async function breakDownTask({ goal, listId, userId, telegramId }) {
+  const final = await graph.invoke({ goal, listId, userId, telegramId });
   return {
     goal,
     subtasks: final.subtasks,
